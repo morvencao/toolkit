@@ -44,10 +44,10 @@ function istioDnsmasq() {
   # Multiple tries, it may take some time until the controllers generate the IPs
   for i in {1..20}
   do
-    PILOT_IP=$(kubectl get -n $NS service istio-pilot -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    PILOT_IP=$(kubectl get -n $NS service istio-pilot-ilb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     ISTIO_DNS=$(kubectl get -n kube-system service dns-ilb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-    MIXER_IP=$(kubectl get -n $NS service istio-telemetry -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-    CITADEL_IP=$(kubectl get -n $NS service istio-citadel -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    MIXER_IP=$(kubectl get -n $NS service mixer-ilb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    CITADEL_IP=$(kubectl get -n $NS service citadel-ilb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
     if [ "${PILOT_IP}" == "" -o  "${ISTIO_DNS}" == "" -o "${MIXER_IP}" == "" -o "${CITADEL_IP}" == "" ] ; then
       echo "Waiting for ILBs, pilot=$PILOT_IP, MIXER_IP=$MIXER_IP, CITADEL_IP=$CITADEL_IP, DNS=$ISTIO_DNS - kubectl get -n $NS service: $(kubectl get -n $NS service)"
@@ -87,7 +87,7 @@ function istioClusterEnv() {
   local CP_AUTH_POLICY=${CONTROL_PLANE_AUTH_POLICY:-MUTUAL_TLS}
 
   # TODO: parse it all from $(kubectl config current-context)
-  CIDR="10.0.0.0/24"  # To-do: get CIDR from kube context
+  CcaIDR="10.0.0.0/16"  # To-do: get CIDR from kube context
   echo "ISTIO_SERVICE_CIDR=$CIDR" > cluster.env
   echo "ISTIO_SYSTEM_NAMESPACE=$ISTIO_NS" >> cluster.env
   echo "CONTROL_PLANE_AUTH_POLICY=$CP_AUTH_POLICY" >> cluster.env
@@ -144,12 +144,11 @@ function istioBootstrapVM() {
   local SA=${3:-${SERVICE_ACCOUNT:-default}}
   local NS=${4:-${SERVICE_NAMESPACE:-}}
   
-  local VERSIONS="0.8.0" # To-do: Replace hard-coded version, support all versions
-  if [[ -n "$VERSION" ]] && [[ $VERSIONS == *"$VERSION"* ]]; then
+  if [[ -n "$VERSION" ]]; then
     # To-do: replace hard-coded deb URL
     echo "export PILOT_DEBIAN_URL=https://storage.googleapis.com/istio-release/releases/$VERSION/deb" > istio.VERSION
   else
-    echo "Must specify istio version(0.8.0) either in parameter or environment variable: ISTIO_VERSION"
+    echo "Must specify istio version either in parameter or environment variable: ISTIO_VERSION"
     echo "Exiting..."
     return 1
   fi

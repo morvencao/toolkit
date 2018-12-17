@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-admin-for-bookinfo
+  name: ibm-privileged-clusterrole-for-bookinfo
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: cluster-admin
+  name: ibm-privileged-clusterrole
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: Group

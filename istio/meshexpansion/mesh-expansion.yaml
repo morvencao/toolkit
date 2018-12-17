@@ -37,9 +37,7 @@ spec:
     protocol: UDP
   selector:
     app: kube-dns
-
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
