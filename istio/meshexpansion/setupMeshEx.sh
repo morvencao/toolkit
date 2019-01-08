@@ -87,7 +87,7 @@ function istioClusterEnv() {
   local CP_AUTH_POLICY=${CONTROL_PLANE_AUTH_POLICY:-MUTUAL_TLS}
 
   # TODO: parse it all from $(kubectl config current-context)
-  CcaIDR="10.0.0.0/16"  # To-do: get CIDR from kube context
+  CIDR="10.0.0.0/16"  # To-do: get CIDR from kube context
   echo "ISTIO_SERVICE_CIDR=$CIDR" > cluster.env
   echo "ISTIO_SYSTEM_NAMESPACE=$ISTIO_NS" >> cluster.env
   echo "CONTROL_PLANE_AUTH_POLICY=$CP_AUTH_POLICY" >> cluster.env
