@@ -48,8 +48,9 @@ function istioDnsmasq() {
     ISTIO_DNS=$(kubectl get -n kube-system service dns-ilb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     MIXER_IP=$(kubectl get -n $NS service mixer-ilb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     CITADEL_IP=$(kubectl get -n $NS service citadel-ilb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    ZIPKIN_IP=$(kubectl get -n "$NS" service zipkin-ilb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
-    if [ "${PILOT_IP}" == "" -o  "${ISTIO_DNS}" == "" -o "${MIXER_IP}" == "" -o "${CITADEL_IP}" == "" ] ; then
+    if [ "${PILOT_IP}" == "" ] || [  "${ISTIO_DNS}" == "" ] || [ "${MIXER_IP}" == "" ] || [ "${CITADEL_IP}" == "" ] || [ "${ZIPKIN_IP}" == "" ] ; then
       echo "Waiting for ILBs, pilot=$PILOT_IP, MIXER_IP=$MIXER_IP, CITADEL_IP=$CITADEL_IP, DNS=$ISTIO_DNS - kubectl get -n $NS service: $(kubectl get -n $NS service)"
       sleep 30
     else
@@ -57,25 +58,29 @@ function istioDnsmasq() {
     fi
   done
 
-  if [ "${PILOT_IP}" == "" -o  "${ISTIO_DNS}" == "" -o "${MIXER_IP}" == "" -o "${CITADEL_IP}" == "" ] ; then
+  if [ "${PILOT_IP}" == "" ] || [  "${ISTIO_DNS}" == "" ] || [ "${MIXER_IP}" == "" ] || [ "${CITADEL_IP}" == "" ] || [ "${ZIPKIN_IP}" == "" ] ; then
     echo "Failed to create ILBs"
     exit 1
   fi
 
-  #/etc/dnsmasq.d/kubedns
-  echo "server=/svc.cluster.local/$ISTIO_DNS" > kubedns
-  echo "address=/istio-policy/$MIXER_IP" >> kubedns
-  echo "address=/istio-telemetry/$MIXER_IP" >> kubedns
-  echo "address=/istio-pilot/$PILOT_IP" >> kubedns
-  echo "address=/istio-citadel/$CITADEL_IP" >> kubedns
-  echo "address=/istio-ca/$CITADEL_IP" >> kubedns # Deprecated. For backward compatibility
-  # Also generate host entries for the istio-system. The generated config will work with both
-  # 'cluster-wide' and 'per-namespace'.
-  echo "address=/istio-policy.$NS/$MIXER_IP" >> kubedns
-  echo "address=/istio-telemetry.$NS/$MIXER_IP" >> kubedns
-  echo "address=/istio-pilot.$NS/$PILOT_IP" >> kubedns
-  echo "address=/istio-citadel.$NS/$CITADEL_IP" >> kubedns
-  echo "address=/istio-ca.$NS/$CITADEL_IP" >> kubedns # Deprecated. For backward compatibility
+   #/etc/dnsmasq.d/kubedns
+  {
+    echo "server=/svc.cluster.local/$ISTIO_DNS"
+    echo "address=/istio-policy/$MIXER_IP"
+    echo "address=/istio-telemetry/$MIXER_IP"
+    echo "address=/istio-pilot/$PILOT_IP"
+    echo "address=/istio-citadel/$CITADEL_IP"
+    echo "address=/istio-ca/$CITADEL_IP" # Deprecated. For backward compatibility
+    echo "address=/zipkin/${ZIPKIN_IP}"
+    # Also generate host entries for the istio-system. The generated config will work with both
+    # 'cluster-wide' and 'per-namespace'.
+    echo "address=/istio-policy.$NS/$MIXER_IP"
+    echo "address=/istio-telemetry.$NS/$MIXER_IP"
+    echo "address=/istio-pilot.$NS/$PILOT_IP"
+    echo "address=/istio-citadel.$NS/$CITADEL_IP"
+    echo "address=/istio-ca.$NS/$CITADEL_IP" # Deprecated. For backward compatibility
+    echo "address=/zipkin.$NS/${ZIPKIN_IP}"
+  } > kubedns
 
   echo "Generated Dnsmaq config file 'kubedns'. Install it in /etc/dnsmasq.d and restart dnsmasq."
   echo "$0 machineSetup does this for you."
