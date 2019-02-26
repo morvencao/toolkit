@@ -1,52 +1,55 @@
+package main
+
 import (
 	"flag"
 	"fmt"
-	"io"
+	"html"
+	"log"
 	"net/http"
-	"sync"
 
     "github.com/Shopify/sarama"
 )
 
 var (
-	wg  sync.WaitGroup
 	port = flag.Int("port", 9080, "The http server port.")
 	kafkaSvr = flag.String("kafka-server-address", "localhost", "The address for kafaka server, if not set, use localhost instead.")
 	kafkaPort = flag.Int("kafka-port", 9092, "The port for kafka server, default valus is 9092.")
+	kafkaTopic = flag.String("kafka-topic", "test", "The topic for kafka.")
 )
 
 func main() {
 	flag.Parse()
 
-	http.HandleFunc("/", consumerHandler)
-	http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", *port), nil)
-}
+	kafkaURL := fmt.Sprintf("%s:%d", *kafkaSvr, *kafkaPort)
+	brokers := []string{kafkaURL}
 
-func consumerHandler(w http.ResponseWriter, r *http.Request) {
-    consumer, err := sarama.NewConsumer([]string{kafkaSvr + "" + kafkaPort}, nil)
-    if err != nil {
-        panic(err)
+	producer, err := newProducer(brokers)
+	if err != nil {
+		fmt.Println("Could not create producer: ", err)
 	}
 
-    partitionList, err := consumer.Partitions("test")
-    if err != nil {
-        panic(err)
+	consumer, err := sarama.NewConsumer(brokers, nil)
+	if err != nil {
+		fmt.Println("Could not create consumer: ", err)
 	}
 
-    for partition := range partitionList {
-        pc, err := consumer.ConsumePartition("test", int32(partition), sarama.OffsetNewest)
-        if err != nil {
-            panic(err)
-        }
-        defer pc.AsyncClose()
-        wg.Add(1)
-        go func(sarama.PartitionConsumer) {
-            defer wg.Done()
-            for msg := range pc.Messages() {
-				fmt.Fprintf(w, "%s---Partition:%d, Offset:%d, Key:%s, Value:%s\n", msg.Topic,msg.Partition, msg.Offset, string(msg.Key), string(msg.Value))
-            }
-        }(pc)
-    }
-    wg.Wait()
-    consumer.Close()
+	subscribe(*kafkaTopic, consumer)
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "Hello Sarama!") })
+
+	http.HandleFunc("/save", func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		r.ParseForm()
+		msg := prepareMessage(*kafkaTopic, r.FormValue("q"))
+		partition, offset, err := producer.SendMessage(msg)
+		if err != nil {
+			fmt.Fprintf(w, "%s error occured.", err.Error())
+		} else {
+			fmt.Fprintf(w, "Message was saved to partion: %d.\nMessage offset is: %d.\n", partition, offset)
+		}
+	})
+
+	http.HandleFunc("/retrieve", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, html.EscapeString(getMessage())) })
+
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", *port), nil))
 }
