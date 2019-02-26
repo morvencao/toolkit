@@ -30,6 +30,6 @@ spec:
       containers:
       - name: kafkaclient
         image: morvencao/kafka-client:v1
-        args: ['-kafka-server-address', '9.30.212.236', '--kafka-port', '9092']
+        args: ['-kafka-server-address', '9.30.212.236', '-kafka-port', '9092']
         imagePullPolicy: IfNotPresent
 ---
