@@ -1,6 +1,9 @@
 apiVersion: v1
 entries:
-  ibm-common-service-operator:
+  ibm-cs-healthcheck-case:
+    latestAppVersion: 1.0.0
+    latestVersion: 1.0.0
+  ibm-common-services:
     latestAppVersion: 1.0.0
     latestVersion: 1.0.0
   ibm-kong-operator-case:
