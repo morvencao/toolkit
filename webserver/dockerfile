@@ -1,0 +1,10 @@
+FROM golang as compiler
+WORKDIR /workspace
+COPY go.mod .
+COPY . .
+RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o webserver ./main.go
+FROM scratch
+COPY --from=compiler /workspace/webserver .
+EXPOSE 8080
+CMD ["./webserver"]
+
