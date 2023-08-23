@@ -1,8 +1,0 @@
-go get github.com/Shopify/sarama
-
-CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kafka-client .
-
-docker build --no-cache -t morvencao/kafka-client:v1 .
-rm -rf kafka-client
-
-docker push morvencao/kafka-client:v1 .
